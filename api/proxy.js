@@ -1,19 +1,27 @@
-// api/proxy.js
-import fetch from 'node-fetch';
+const fetch = require('node-fetch');
 
-export default async function handler(req, res) {
-  const { query } = req; // extrae los parámetros de consulta
-  const baseURL = "http://ovc.catastro.meh.es/Cartografia/WMS/ServidorWMS.aspx?";
+module.exports = (req, res) => {
+  // Obtener los parámetros de la consulta
+  const { SERVICE, VERSION, REQUEST, LAYERS, QUERY_LAYERS, INFO_FORMAT, SRS, BBOX, WIDTH, HEIGHT, X, Y } = req.query;
 
-  const queryString = new URLSearchParams(query).toString();
-  const url = `${baseURL}${queryString}`;
+  // Construir la URL del servicio WMS
+  const wmsUrl = `http://ovc.catastro.meh.es/Cartografia/WMS/ServidorWMS.aspx?SERVICE=${SERVICE}&VERSION=${VERSION}&REQUEST=${REQUEST}&LAYERS=${LAYERS}&QUERY_LAYERS=${QUERY_LAYERS}&INFO_FORMAT=${INFO_FORMAT}&SRS=${SRS}&BBOX=${BBOX}&WIDTH=${WIDTH}&HEIGHT=${HEIGHT}&X=${X}&Y=${Y}`;
 
-  try {
-    const response = await fetch(url);
-    const data = await response.text();
-    res.status(200).send(data);
-  } catch (error) {
-    console.error('Error al obtener datos del WMS:', error);
-    res.status(500).json({ message: 'Error al obtener datos del WMS' });
-  }
-}
+  // Hacer la solicitud al servicio WMS
+  fetch(wmsUrl)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Error en la respuesta del WMS: ${response.statusText}`);
+      }
+      return response.text();
+    })
+    .then(data => {
+      // Devolver la respuesta al cliente
+      res.setHeader('Content-Type', 'text/xml'); // Ajusta según el tipo de respuesta
+      res.send(data);
+    })
+    .catch(error => {
+      console.error('Error al acceder al WMS:', error);
+      res.status(500).send('Error en el servidor');
+    });
+};
